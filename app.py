@@ -1,32 +1,30 @@
+import streamlit as st
+import extract_msg
 import re
 
-def convert_flight_data(input_text):
-    # 1. Extract the Registration (e.g., G-LCAD)
-    # Looks for G- followed by 4 letters
-    reg_match = re.search(r'G-LC([A-Z]{2})', input_text)
-    aircraft_id = reg_match.group(1) if reg_match else "CAD" # Defaulting to CAD based on your example
+def parse_aircraft_data(text):
+    # Extracts the last 3 letters of the registration (e.g., CAD)
+    reg_match = re.search(r'G-LC([A-Z]{2})', text)
+    aircraft_suffix = reg_match.group(1) if reg_match else "CAD"
     
-    # 2. Extract Flight Numbers (e.g., BA9769T)
-    # Looks for 'BA' followed by digits and an optional letter
-    flights = re.findall(r'BA([0-9]{1,4}[A-Z]?)', input_text)
+    # Extracts flight numbers by removing 'BA' prefix
+    flights = re.findall(r'BA(\d{1,4}[A-Z]?)', text)
     
-    # 3. Remove duplicates while preserved order
+    # Keeps unique flight numbers in order
     unique_flights = []
     for f in flights:
         if f not in unique_flights:
             unique_flights.append(f)
-            
-    # 4. Format the final string
-    # Based on your requirement: I TR T [Last 3 of Reg] [Flight Numbers]
-    result = f"I TR T {aircraft_id} {' '.join(unique_flights)}"
     
-    return result
+    return f"I TR T {aircraft_suffix} {' '.join(unique_flights)}"
 
-# Example usage with your provided snippet
-raw_data = """
-18.02 BA9769T  LCY NWI 0900 0945 G-LCAD       E90  0  2+0/2
-18.02 BA9771T  NWI LCY 1250 1330 G-LCAD       E90  0  2+0/2
-18.02 BA4466   LCY DUB2 1500 1620 G-LCAD      E90  38 2+3/0
-"""
+st.title("✈️ Aircraft Allocation Formatter")
 
-print(convert_flight_data(raw_data))
+uploaded_file = st.file_uploader("Drop your .msg report here", type="msg")
+
+if uploaded_file:
+    msg = extract_msg.Message(uploaded_file)
+    # The 'body' contains the flight details like BA9769T and G-LCAD 
+    result = parse_aircraft_data(msg.body)
+    st.subheader("System Input String:")
+    st.code(result)
