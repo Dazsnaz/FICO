@@ -3,20 +3,19 @@ import extract_msg
 import re
 
 def parse_aircraft_sections(text):
-    # This splits the report into sections based on the Aircraft Registration (G-XXXX)
-    # It finds all flight numbers associated with that specific registration
+    # Splits report into lines to associate flights with specific aircraft 
     lines = text.split('\n')
     aircraft_map = {}
     current_reg = None
 
     for line in lines:
-        # Look for the Registration (e.g., G-LCAD)
+        # Search for Registration (e.g., G-LCAD) 
         reg_match = re.search(r'G-([A-Z0-9]{4})', line)
-        # Look for Flight Numbers (e.g., BA9769T)
+        # Search for Flight Numbers (e.g., BA9769T) 
         flight_matches = re.findall(r'BA(\d{1,4}[A-Z]?)', line)
 
         if reg_match:
-            current_reg = reg_match.group(1)[-3:] # Get last 3 (e.g., CAD)
+            current_reg = reg_match.group(1)[-3:] # Extract last 3 chars 
             if current_reg not in aircraft_map:
                 aircraft_map[current_reg] = []
         
@@ -25,7 +24,7 @@ def parse_aircraft_sections(text):
                 if f not in aircraft_map[current_reg]:
                     aircraft_map[current_reg].append(f)
 
-    # Format each aircraft onto its own new line
+    # Build the multi-line output string 
     output_lines = []
     for reg, flights in aircraft_map.items():
         if flights:
@@ -43,9 +42,13 @@ uploaded_file = st.file_uploader("Drop your .msg report here", type="msg")
 if uploaded_file:
     try:
         msg = extract_msg.Message(uploaded_file)
-        result = parse_aircraft_sections(msg.body)
+        # Process the body text from the msg file 
+        raw_result = parse_aircraft_sections(msg.body)
+        
         st.success("Allocation String(s) Generated:")
-        st.code(result) # This will now show each aircraft on a new line
+        # Editable text area so you can tweak the result before copying
+        final_alloc_text = st.text_area("Edit or Copy Result:", value=raw_result, height=150)
+        
     except Exception as e:
         st.error(f"Error: {e}")
 
@@ -53,6 +56,7 @@ st.divider()
 
 # --- SECTION 2: DIVERSION BOX ---
 st.header("2. Diversion Input")
+# Form allows for 'Enter' key to trigger generation
 with st.form("diversion_form"):
     col1, col2, col3 = st.columns(3)
     
@@ -74,14 +78,17 @@ with st.form("diversion_form"):
 
     submit_button = st.form_submit_button("Generate Diversion Message")
 
+# Logic to display the Diversion string
 if submit_button:
     if not flight_num or not stn_1 or not arr_time:
         st.warning("Please fill in the Flight Number, Station, and Arrival Time.")
     else:
         if div_type == "Continue (DIVN)":
-            final_string = f"I DIVN {stn_1}-{stn_2} E{arr_time} {reason}"
+            # Format: I DIVN BHX-LCY E1020 WT
+            div_final = f"I DIVN {stn_1}-{stn_2} E{arr_time} {reason}"
         else:
-            final_string = f"I DIVT {stn_1} E{arr_time} {reason}"
+            # Format: I DIVT BHX E1020 WT
+            div_final = f"I DIVT {stn_1} E{arr_time} {reason}"
         
         st.subheader("Generated Message:")
-        st.code(final_string)
+        st.code(div_final)
