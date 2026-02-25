@@ -84,4 +84,4 @@ if submit_button:
             final_string = f"I DIVT {stn_1} E{arr_time} {reason}"
         
         st.subheader("Generated Message:")
-        st.code(final_string)
+        st.code(final_string) 
